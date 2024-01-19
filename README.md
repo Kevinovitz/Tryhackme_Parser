@@ -31,12 +31,12 @@ $ pip install -r requirements.txt
 
 Now you need to edit the script in order for it to work as you want. Most are placed at the top of the script.
 
-THM PARSER MODIFY
+![Thm Parse Script Modify](https://github.com/Kevinovitz/Tryhackme_Parser/blob/main/thm_parser_script_modify.png)
 
 First things to add are your credentials. Use your Tryhackme email and password.
 
-> [!note]
-> Make sure to remove your credentials if you are not using the script anymore or want to share it with others!
+> [!warning]
+> **Make sure to remove your credentials if you are not using the script anymore or want to share it with others!**
 
 The Tryhackme login page has been added. Just in case it should ever change. No modification should be necessary for now.
 
@@ -59,8 +59,8 @@ When it asks for a room url just can either:
 1. Hit enter and let it use its default room (https://tryhackme.com/room/encryptioncrypto101 in this case).
 2. Enter a custom url for any tryhackme room like: https://tryhackme.com/room/encryptioncrypto101. Then hit enter.
 
-THM PARSER SCRIPT START
+![Thm Parser Script Start](https://github.com/Kevinovitz/Tryhackme_Parser/blob/main/thm_parser_script_start.png)
 
 The resulting `.md` file can be uploaded to Github. Make sure to check if everything is as it should be. Some textual errors may occur.
 
-THM PARSER RESULT
+![Thm Parser Result](https://github.com/Kevinovitz/Tryhackme_Parser/blob/main/thm_parser_result.png)
