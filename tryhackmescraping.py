@@ -42,7 +42,7 @@ def scrape_webpage_with_selenium(url,cache):
         # Load the page, login, and parse the data on the live webpage
         try:
             
-            print('Loading Slenium driver.')    # Progress report
+            print('Loading Selenium driver.')    # Progress report
 
             # Create a new instance of the Chrome driver (you can use other browsers too)
             driver = webdriver.Chrome()
