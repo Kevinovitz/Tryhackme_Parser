@@ -1,7 +1,7 @@
 #########################################################################################
 #                                                                                       #
 #   Author: Kevinovitz                                                                  #
-#   Version: 1.0                                                                        #
+#   Version: 1.1                                                                        #
 #                                                                                       #
 #   Description: This script is used to scrape the questions and other information      #
 #   from a tryhackme room. It will then add it to a structure and save to a file.       #
@@ -16,6 +16,15 @@
 #   The default room to scrape from                                                     #
 #   Layout of the text                                                                  #
 #   The body text with the correct Github link etc.                                     #
+#                                                                                       #
+#   Changelog:                                                                          #
+#                                                                                       #
+#   1.1                                                                                 #
+#   - Uses the Firefox driver instead of Chrome because reasons.                        #
+#   - The script now checks for a completed captcha challenge rather than waiting       #
+#   a set amount of time.                                                               #
+#   - The replaced task list variable couldn't be found if the first if statement       #
+#   didn't execute.                                                                     #
 #                                                                                       #
 #########################################################################################
 
@@ -45,7 +54,7 @@ def scrape_webpage_with_selenium(url,cache):
             print('Loading Selenium driver.')    # Progress report
 
             # Create a new instance of the Chrome driver (you can use other browsers too)
-            driver = webdriver.Chrome()
+            driver = webdriver.Firefox()
 
             # Open the webpage in the browser
             driver.get(default_login)
@@ -70,7 +79,14 @@ def scrape_webpage_with_selenium(url,cache):
             print('Waiting for user to complete captcha challenge.')    # Progress report
 
             # Add delay so user can complete the Captcha challenge
-            time.sleep(15)
+            # time.sleep(15)
+
+            # Better delay. Check for the Captcha challenge to be completed. Then log in.
+            WebDriverWait(driver, 10).until(EC.frame_to_be_available_and_switch_to_it((By.CSS_SELECTOR, "iframe[title='reCAPTCHA']")))
+            WebDriverWait(driver, 60).until(EC.visibility_of_element_located((By.CSS_SELECTOR, "span.recaptcha-checkbox-checked")))
+            
+            # Don't forget to switch back to the main page
+            driver._switch_to.default_content()
             
             print('Logging in.')    # Progress report
 
@@ -232,14 +248,14 @@ if __name__ == "__main__":
                             
                             # Replace all spaces with dashes
                             if ' ' in stripped_task_title:
-                                replaced_task_title = str(task_title.strip()).replace(' ', '-')
+                                stripped_task_title = str(task_title.strip()).replace(' ', '-')
                             
                             # Remove all commas
-                            if ',' in replaced_task_title:
-                                replaced_task_title = str(task_title.strip()).replace(',', '')
+                            if ',' in stripped_task_title:
+                                stripped_task_title = str(task_title.strip()).replace(',', '')
 
                             text_questions += '### ' + task_title.strip() + '\n\n'
-                            table_of_contents += '- [' + str(task_title.strip()) + '](#' + replaced_task_title.lower() + ')\n'
+                            table_of_contents += '- [' + str(task_title.strip()) + '](#' + stripped_task_title.lower() + ')\n'
                         else:
                             print("No text directly within the 'a' element.")
                 else:
