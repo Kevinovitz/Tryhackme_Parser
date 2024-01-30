@@ -1,7 +1,7 @@
 #########################################################################################
 #                                                                                       #
 #   Author: Kevinovitz                                                                  #
-#   Version: 1.1                                                                        #
+#   Version: 1.2                                                                        #
 #                                                                                       #
 #   Description: This script is used to scrape the questions and other information      #
 #   from a tryhackme room. It will then add it to a structure and save to a file.       #
@@ -16,15 +16,6 @@
 #   The default room to scrape from                                                     #
 #   Layout of the text                                                                  #
 #   The body text with the correct Github link etc.                                     #
-#                                                                                       #
-#   Changelog:                                                                          #
-#                                                                                       #
-#   1.1                                                                                 #
-#   - Uses the Firefox driver instead of Chrome because reasons.                        #
-#   - The script now checks for a completed captcha challenge rather than waiting       #
-#   a set amount of time.                                                               #
-#   - The replaced task list variable couldn't be found if the first if statement       #
-#   didn't execute.                                                                     #
 #                                                                                       #
 #########################################################################################
 
@@ -43,102 +34,108 @@ default_login = 'https://tryhackme.com/login'
 email = 'EMAIL HERE'                                  # REMOVE THIS WHEN SHARING!!!!
 password = 'PASSWORD HERE'                            # REMOVE THIS WHEN SHARING!!!!
 default_room = 'https://tryhackme.com/room/encryptioncrypto101'
+write_to_cache = False
+use_cached = False
 
-def scrape_webpage_with_selenium(url,cache):
+def read_cached_file():
+
+    # Specify the file path
+    file_path = 'parsed_page.txt'
+
+    print('Loading cached webpage')    # Progress report
+
+    # Open the file in read mode ('r')
+    with open(file_path, 'r', encoding='utf-8') as file:
+    # Read the entire contents of the file into a string
+        file_contents = file.read()
     
-    if not cache:
+    print('Parsing cached webpage.')    # Progress report
 
-        # Load the page, login, and parse the data on the live webpage
-        try:
-            
-            print('Loading Selenium driver.')    # Progress report
+    # Return the parsed data
+    soup = BeautifulSoup(file_contents, 'html.parser')
+    return soup
 
-            # Create a new instance of the Chrome driver (you can use other browsers too)
-            driver = webdriver.Firefox()
+def login_with_selenium():
+    
+    # Load the page, login, and parse the data on the live webpage
+    try:
+        
+        print('Loading Selenium driver.')    # Progress report
 
-            # Open the webpage in the browser
-            driver.get(default_login)
-
-            # Wait for it to load
-            driver.implicitly_wait(10)
-
-            # Find and fill in the login form fields using the new method
-            username_field = driver.find_element(By.NAME, 'email')
-            password_field = driver.find_element(By.NAME, 'password')
-            submit_button = driver.find_element(By.XPATH, "//*[@id='wrapper']/div[2]/form/button")  # Replace with the actual name attribute of the submit button
-
-            # Do something with the input fields (e.g., enter values)
-            username_field.clear()
-            username_field.click()
-            username_field.send_keys(email)
-            password_field.clear()
-            password_field.click()
-            # REMOVE PASSWORD WHEN NOT USING FOR A LONGER PERIOD OF TIME OR WHEN SHARING THIS DOCUMENT!!!
-            password_field.send_keys(password)
-            
-            print('Waiting for user to complete captcha challenge.')    # Progress report
-
-            # Add delay so user can complete the Captcha challenge
-            # time.sleep(15)
-
-            # Better delay. Check for the Captcha challenge to be completed. Then log in.
-            WebDriverWait(driver, 10).until(EC.frame_to_be_available_and_switch_to_it((By.CSS_SELECTOR, "iframe[title='reCAPTCHA']")))
-            WebDriverWait(driver, 60).until(EC.visibility_of_element_located((By.CSS_SELECTOR, "span.recaptcha-checkbox-checked")))
-            
-            # Don't forget to switch back to the main page
-            driver._switch_to.default_content()
-            
-            print('Logging in.')    # Progress report
-
-            # Login
-            submit_button.click()
-
-        except Exception as e:
-            print(f"An error occurred: {e}")
+        # Create a new instance of the Chrome driver (you can use other browsers too)
+        driver = webdriver.Firefox()
 
         # Open the webpage in the browser
-        driver.get(url)
+        driver.get(default_login)
 
-        # Wait for the page to load (you might need to adjust the time based on your needs)
+        # Wait for it to load
         driver.implicitly_wait(10)
 
-        # Added another second as it usually exits too fast
-        time.sleep(1)
+        # Find and fill in the login form fields using the new method
+        username_field = driver.find_element(By.NAME, 'email')
+        password_field = driver.find_element(By.NAME, 'password')
+        submit_button = driver.find_element(By.XPATH, "//*[@id='wrapper']/div[2]/form/button")  # Replace with the actual name attribute of the submit button
 
-        # Get the HTML content after JavaScript has executed
-        page_source = driver.page_source
-
-        # Close the browser
-        driver.quit()
-
-        print('Parsing webpage.')    # Progress report
-
-        # Parse the HTML content of the page
-        soup = BeautifulSoup(page_source, 'html.parser')
-        return soup
-
-    # Use a cached webpage for faster testing
-    else:
+        # Do something with the input fields (e.g., enter values)
+        username_field.clear()
+        username_field.click()
+        username_field.send_keys(email)
+        password_field.clear()
+        password_field.click()
+        # REMOVE PASSWORD WHEN NOT USING FOR A LONGER PERIOD OF TIME OR WHEN SHARING THIS DOCUMENT!!!
+        password_field.send_keys(password)
         
-        # Specify the file path
-        file_path = 'parsed_page.txt'
+        print('Waiting for user to complete captcha challenge.')    # Progress report
 
-        print('Loading cached webpage')    # Progress report
+        # Add delay so user can complete the Captcha challenge
+        # time.sleep(15)
 
-        # Open the file in read mode ('r')
-        with open(file_path, 'r', encoding='utf-8') as file:
-        # Read the entire contents of the file into a string
-            file_contents = file.read()
+        # Better delay. Check for the Captcha challenge to be completed. Then log in.
+        WebDriverWait(driver, 10).until(EC.frame_to_be_available_and_switch_to_it((By.CSS_SELECTOR, "iframe[title='reCAPTCHA']")))
+        WebDriverWait(driver, 60).until(EC.visibility_of_element_located((By.CSS_SELECTOR, "span.recaptcha-checkbox-checked")))
         
-        print('Parsing cached webpage.')    # Progress report
+        # Don't forget to switch back to the main page
+        driver._switch_to.default_content()
+        
+        print('Logging in.')    # Progress report
 
-        # Return the parsed data
-        soup = BeautifulSoup(file_contents, 'html.parser')
-        return soup
+        # Login
+        submit_button.click()
 
-    # Uncomment below if you need to export the parsed html object to use a cache.
-    # with open('parsed_page.txt', 'w', encoding='utf-8') as file:
-    #     file.write(str(soup))    
+        return driver
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+def scrape_webpage_with_selenium(url,driver):
+      
+    # Open the webpage in the browser
+    driver.get(url)
+
+    # Wait for the page to load (you might need to adjust the time based on your needs)
+    driver.implicitly_wait(10)
+
+    # Added another second as it usually exits too fast
+    time.sleep(1)
+
+    # Get the HTML content after JavaScript has executed
+    page_source = driver.page_source
+
+    # Close the browser
+    driver.quit()
+
+    print('Parsing webpage.')    # Progress report
+
+    # Parse the HTML content of the page
+    soup = BeautifulSoup(page_source, 'html.parser')
+    
+    # Export the parsed html object to use a cache.
+    if write_to_cache:
+    
+        with open('parsed_page.txt', 'w', encoding='utf-8') as file:
+            file.write(str(soup))    
+
+    return soup
 
 # This function doesn't work, but is left in place for reference (to login using cookies instead of manually).
 def scrape_authenticated_page(url, cookies):
@@ -194,13 +191,41 @@ if __name__ == "__main__":
     
     # Possible to add custom url
     inputtext = input("Please add the url here.")
+
     if not inputtext:
         # Replace 'your_url' with the URL of the webpage you want to scrape
         inputtext = default_room
-        
-    # Set cached to true or false. False mean the live webpage will be visited. True means a previously cached version will be used
-    soup = scrape_webpage_with_selenium(inputtext,False)
     
+    # Use a cached webpage for faster testing
+    if use_cached:
+
+        soup = read_cached_file()
+
+    if not use_cached:
+        
+        not_logged_in = True
+    
+        while not_logged_in:
+
+            driver = login_with_selenium()
+
+            # Get the current url
+            current_url = driver.current_url
+
+            # Check if log in was successfull
+            if current_url == 'https://tryhackme.com/dashboard':
+                not_logged_in = False
+                print("Log in successfull!")
+
+            else:
+                print("Something went wrong when trying to login. Please try again.")
+
+                # Quit the driver
+                driver.quit()
+        
+        # Set use_cached to true or false. False mean the live webpage will be visited. True means a previously cached version will be used
+        soup = scrape_webpage_with_selenium(inputtext,driver)
+        
     table_of_contents = ''
     text_questions = '\n'
 

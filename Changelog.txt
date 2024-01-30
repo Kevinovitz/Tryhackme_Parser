@@ -1,0 +1,18 @@
+Changelog:
+
+1.2
+
+Fixed:
+- When a login attempt didn't succeed it would continue parsing the resulting page. Now it checks whether the login attempt was successfull and tries again if it wasn't.
+- Separated the login and parsing function in order to more easily verify the login attempt.
+
+1.1
+
+Added:
+- Uses the Firefox driver instead of Chrome because reasons.
+- The script now checks for a completed captcha challenge rather than waiting a set amount of time.
+- The replaced task list variable couldn't be found if the first if statement didn't execute.
+
+1.0
+
+- Created the script.
