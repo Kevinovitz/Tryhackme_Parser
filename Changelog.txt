@@ -1,5 +1,14 @@
 Changelog:
 
+1.3
+
+Fixed:
+- Typoe in a variable.
+
+Added:
+- It is now possible to save the file directly to your local github repo so you only need to sync changes.
+- github_path variable can be used to set a path for the local copy of your github write-ups repo. If this is left blank, the file will instead be writen to the current working folder of the script.
+
 1.2
 
 Fixed:

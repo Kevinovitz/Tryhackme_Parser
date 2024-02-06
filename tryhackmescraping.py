@@ -22,6 +22,9 @@
 import re
 import time
 import requests
+import os
+import shutil
+from pathlib import Path
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -36,6 +39,21 @@ password = 'PASSWORD HERE'                            # REMOVE THIS WHEN SHARING
 default_room = 'https://tryhackme.com/room/encryptioncrypto101'
 write_to_cache = False
 use_cached = False
+github_path = ''                                      # Add path to you github writeup repo (C:path\\to\\file). Leave blank if you dont want files to be transferred
+
+def move_file(destination_path,file_name):
+    print('Moving file to new directory.')
+    
+    # Get the working path and destination folder and add the filename to it
+    source_path = os.getcwd()
+    file_dest = destination_path + '\\' + file_name
+    file_source = source_path + '\\' + file_name
+
+    # Create destination folder if it doesnt already exists
+    Path(destination_path).mkdir(exist_ok=True)
+
+    # Copy the file
+    shutil.copyfile(file_source,file_dest)
 
 def read_cached_file():
 
@@ -332,12 +350,28 @@ if __name__ == "__main__":
 
     print('Writing to file.')    # Progress report
 
-    # Write the the resulting strings to a file
-    outpuot_filename = room_code + '.md'
-    with open(outpuot_filename, 'w', encoding='utf-8') as file:
+    # Create file in current directory if github path is not set
+    if github_path:
+        # Write the the resulting strings to a file
+        output_filename = github_path + '\\' + room_code + '\\' + room_code + '.md'
+        # Create destination folder if it doesnt already exists
+        Path(github_path + '\\' + room_code).mkdir(exist_ok=True)
+    else:
+        # Write the the resulting strings to a file
+        output_filename = room_code + '.md'
+
+    with open(output_filename, 'w', encoding='utf-8') as file:
         file.write(body_text)
         file.write(table_of_contents)
         file.write(text_questions)
+
+    # # Commands below were used to move the writen file. Now the script writes the files to the right folder in the first place.
+    # directory_path = github_path + '\\' + room_code
+
+    # # Move the file to your github repo. This will assume you want the rooms grouped in subfolders.
+    # if github_path:
+    #     move_file(directory_path,output_filename)
+
 
 # ====================================================================================================
 # The code between here can be used to obtain a cookie for a session and use it to scrape the webpage.
