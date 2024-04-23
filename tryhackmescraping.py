@@ -41,13 +41,13 @@ from selenium.webdriver.common.by import By
 
 # CHANGE THESE VALUES TO YOUR NEEDS
 default_login = 'https://tryhackme.com/login'
-email = ''                                  # REMOVE THIS WHEN SHARING!!!!
-password = ''                                 # REMOVE THIS WHEN SHARING!!!!
+email = 'EMAIL_HERE'             # REMOVE THIS WHEN SHARING!!!!
+password = 'PASSWORD_HERE'       # REMOVE THIS WHEN SHARING!!!!
 default_room = 'https://tryhackme.com/room/encryptioncrypto101'
-write_to_cache = False
-use_cached = False
-github_path = ''                                             # Add path to you github writeup repo (C:path\\to\\file). Leave blank if you dont want files to be transferred
-github_repo = ''                                             # Add URL to you github writeup repo (https://github.com/username/repo). Leave blank if you won't upload to github.
+github_path = ''                 # Add path to you github writeup repo (C:path\\to\\file). Leave blank if you dont want files to be transferred
+github_repo = ''                 # Add URL to you github writeup repo (https://github.com/username/repo). Make sure to remove any trailing '/'. Leave blank if you won't upload to github.
+write_to_cache = False           # Default is False, when True the resulting parsed webpage will be saved to a temp file.
+use_cached = False               # Default is False, when True the cached webpage will be loaded instead of parsing the live website. Usfull for testing purposes.
 
 def move_file(destination_path,file_name):
     print('Moving file to new directory.')
