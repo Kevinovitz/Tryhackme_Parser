@@ -42,6 +42,10 @@ The Tryhackme login page has been added. Just in case it should ever change. No 
 
 You can change the default room this script will scrape from if you don't supply your own url on script execution. Shouldn't need any change, except if you want to test stuff and don't want to bother with entering a url.
 
+When using Vscode for example, you can add the path to where your synced github files reside. Whenever you run the script, it will automatically save the result to a new folder in your github repo. Just commit and be done with it.
+
+The github repo url is usefull when uploading your files and images to a Github repo. This will add a link to the room cover and banner image.
+
 ## Usage
 
 Simply open a terminal or powershell window in the same folder as the script and run it with:
