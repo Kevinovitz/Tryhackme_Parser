@@ -1,7 +1,7 @@
 #########################################################################################
 #                                                                                       #
 #   Author: Kevinovitz                                                                  #
-#   Version: 1.2                                                                        #
+#   Version: 1.4                                                                        #
 #                                                                                       #
 #   Description: This script is used to scrape the questions and other information      #
 #   from a tryhackme room. It will then add it to a structure and save to a file.       #
@@ -16,6 +16,13 @@
 #   The default room to scrape from                                                     #
 #   Layout of the text                                                                  #
 #   The body text with the correct Github link etc.                                     #
+#                                                                                       #
+#   Changelog:                                                                          #
+#   1.4 - Created variable to link to a github repo instead of hardcoding mine.
+#   1.3 - Tryhackme changed their website to a new layout, this broke the script.       #
+#         Several div/span/img elements where changed in the code to correctly reflect  #
+#         the new element on the page.                                                  #
+#         Lines: 257, 270, 314, 346, 348                                                #
 #                                                                                       #
 #########################################################################################
 
@@ -34,12 +41,13 @@ from selenium.webdriver.common.by import By
 
 # CHANGE THESE VALUES TO YOUR NEEDS
 default_login = 'https://tryhackme.com/login'
-email = 'EMAIL HERE'                                  # REMOVE THIS WHEN SHARING!!!!
-password = 'PASSWORD HERE'                            # REMOVE THIS WHEN SHARING!!!!
+email = ''                                  # REMOVE THIS WHEN SHARING!!!!
+password = ''                                 # REMOVE THIS WHEN SHARING!!!!
 default_room = 'https://tryhackme.com/room/encryptioncrypto101'
 write_to_cache = False
 use_cached = False
-github_path = ''                                      # Add path to you github writeup repo (C:path\\to\\file). Leave blank if you dont want files to be transferred
+github_path = ''                                             # Add path to you github writeup repo (C:path\\to\\file). Leave blank if you dont want files to be transferred
+github_repo = ''                                             # Add URL to you github writeup repo (https://github.com/username/repo). Leave blank if you won't upload to github.
 
 def move_file(destination_path,file_name):
     print('Moving file to new directory.')
@@ -231,7 +239,7 @@ if __name__ == "__main__":
             current_url = driver.current_url
 
             # Check if log in was successfull
-            if current_url == 'https://tryhackme.com/dashboard':
+            if current_url == 'https://tryhackme.com/dashboard' or current_url == 'https://tryhackme.com/paths':
                 not_logged_in = False
                 print("Log in successfull!")
 
@@ -248,7 +256,7 @@ if __name__ == "__main__":
     text_questions = '\n'
 
     # Extract the desired elements using BeautifulSoup methods
-    elements = soup.select('div.card[id^="task-"]')
+    elements = soup.select('div.sc-faHdxz')                 # old site -> elements = soup.select('div.card[id^="task-"]')
 
     # Check if the 'div' element is found before extracting text
     if elements:
@@ -261,8 +269,8 @@ if __name__ == "__main__":
                 print('Extracting task titles.')    # Progress report
         
                 # Extract the desired elements using BeautifulSoup methods
-                task_titles = element.select('a.card-link')
-                
+                task_titles = element.select('span.sc-gHZEoh')                      # old site -> task_titles = element.select('a.card-link')
+
                 # Check if the 'a' element is found before extracting text
                 if task_titles:
                     
@@ -299,13 +307,14 @@ if __name__ == "__main__":
 
                             text_questions += '### ' + task_title.strip() + '\n\n'
                             table_of_contents += '- [' + str(task_title.strip()) + '](#' + stripped_task_title.lower() + ')\n'
+
                         else:
                             print("No text directly within the 'a' element.")
                 else:
                     print(" 'a' element not found.")
                 
-                questions = element.select('div.room-task-question-details')
-                
+                questions = element.select('div.sc-fKAtdO')             # old site -> questions = element.select('div.room-task-question-details')
+
                 print('Extracting questions.')    # Progress report
 
                 # Check if the div element is found before extracting text
@@ -321,6 +330,7 @@ if __name__ == "__main__":
                         #print(f"{i}. {div_text}\n\n\n\n   ><details><summary>Click for answer</summary></details>\n")
                         text_questions += str(i) + '. ' + str(text_question) + '\n\n\n\n   ><details><summary>Click for answer</summary></details>\n\n'
                         i = i + 1
+
                 else:
                     print("<div> element not found.")
             else:
@@ -335,16 +345,22 @@ if __name__ == "__main__":
     url = url_element.get('content', '')
 
     room_code = url.split('/room/',1)[1]
-    room_title = soup.find('h1', 'bold-head').string
+    room_title = soup.find('h1', 'sc-hBxvHn').string            # old site -> room_title = soup.find('h1', 'bold-head').string
 
-    image_element = soup.select_one('img[id=room-image-large]')
+    image_element = soup.select_one("img[alt='Room Banner']")   # old site -> image_element = soup.select_one('img[id=room-image-large]')
     image_link = image_element.get('src', '')
 
     # These lines make up the begin part of the file. From the banner up to the table of contents
-    body_text = '![' + room_title + ' Banner](' + image_link + ')\n\n'
+
+    # Check if the image can be directly linked or needs to be downloaded.
+    if "tryhackme-images.s3.amazonaws.com" in str(image_link):
+        body_text = '![' + room_title + ' Banner](' + github_repo + '/blob/main/' + room_code + '/ROOM_TITLE_Banner.png)\n\n'
+    else:
+        body_text = '![' + room_title + ' Banner](' + image_link + ')\n\n'
+
     # Below can be used if the image link does not lead to an image, rather downloads it
-    # https://github.com/Kevinovitz/TryHackMe_Writeups/blob/main/' + roomcode + '/ROOM_TITLE_Banner.png
-    body_text += '<p align="center">\n   <img src="https://github.com/Kevinovitz/TryHackMe_Writeups/blob/main/' + room_code + '/ROOM_TITLE_Cover.png" alt="' + room_title + ' Logo">\n</p>\n\n'
+    # https://github.com/Kevinovitz/TryHackMe_Writeups/blob/main/' + room_code + '/ROOM_TITLE_Banner.png
+    body_text += '<p align="center">\n   <img src="' + github_repo + '/blob/main/' + room_code + '/ROOM_TITLE_Cover.png" alt="' + room_title + ' Logo">\n</p>\n\n'
     body_text += '# ' + room_title + '\n\nThis guide contains the answer and steps necessary to get to them for the [' + room_title + '](' + url + ') room.\n\n'
     body_text += '## Table of contents\n\n'
 
