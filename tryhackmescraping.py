@@ -18,7 +18,15 @@
 #   The body text with the correct Github link etc.                                     #
 #                                                                                       #
 #   Changelog:                                                                          #
-#   1.4 - Created variable to link to a github repo instead of hardcoding mine.
+#   1.5 - Due to the new site layout, the element selectors changed. Apparently, they   # 
+#         they have since changed again. I am not sure if this happens everytime or     #
+#         only after a set time.                                                        #
+#       - The correct selectors have been added.                                        #
+#       - Time to wait before closing selenium instance has been increased to prevent   #
+#         an incomplete page from being parsed.                                         #
+#       - Added functionality of downloading the banner image when necessary instead    #
+#         of only changing the url to a file path.                                      #
+#   1.4 - Created variable to link to a github repo instead of hardcoding mine.         #
 #   1.3 - Tryhackme changed their website to a new layout, this broke the script.       #
 #         Several div/span/img elements where changed in the code to correctly reflect  #
 #         the new element on the page.                                                  #
@@ -38,6 +46,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.common.by import By
+import urllib
 
 # CHANGE THESE VALUES TO YOUR NEEDS
 default_login = 'https://tryhackme.com/login'
@@ -142,7 +151,7 @@ def scrape_webpage_with_selenium(url,driver):
     driver.implicitly_wait(10)
 
     # Added another second as it usually exits too fast
-    time.sleep(1)
+    time.sleep(3)
 
     # Get the HTML content after JavaScript has executed
     page_source = driver.page_source
@@ -256,7 +265,7 @@ if __name__ == "__main__":
     text_questions = '\n'
 
     # Extract the desired elements using BeautifulSoup methods
-    elements = soup.select('div.sc-faHdxz')                 # old site -> elements = soup.select('div.card[id^="task-"]')
+    elements = soup.select('div.sc-kCoybQ') # faHdxz                # old site -> elements = soup.select('div.card[id^="task-"]') -> Might change in the future
 
     # Check if the 'div' element is found before extracting text
     if elements:
@@ -269,7 +278,7 @@ if __name__ == "__main__":
                 print('Extracting task titles.')    # Progress report
         
                 # Extract the desired elements using BeautifulSoup methods
-                task_titles = element.select('span.sc-gHZEoh')                      # old site -> task_titles = element.select('a.card-link')
+                task_titles = element.select('span.sc-gPdIsl') # gHZEoh                      # old site -> task_titles = element.select('a.card-link') -> Might change in the future
 
                 # Check if the 'a' element is found before extracting text
                 if task_titles:
@@ -313,7 +322,7 @@ if __name__ == "__main__":
                 else:
                     print(" 'a' element not found.")
                 
-                questions = element.select('div.sc-fKAtdO')             # old site -> questions = element.select('div.room-task-question-details')
+                questions = element.select('div.sc-cyJUJa') # fKAtdO            # old site -> questions = element.select('div.room-task-question-details') -> Might change in the future
 
                 print('Extracting questions.')    # Progress report
 
@@ -326,7 +335,8 @@ if __name__ == "__main__":
                     for question in questions:
                         
                         # Extract text from the div, p, and span elements
-                        text_question = question.get_text(strip=True)
+                        text_question = question.get_text(strip=True).removesuffix('Submit')                # The new site layout adds 'Submit' to the end of this element.
+
                         #print(f"{i}. {div_text}\n\n\n\n   ><details><summary>Click for answer</summary></details>\n")
                         text_questions += str(i) + '. ' + str(text_question) + '\n\n\n\n   ><details><summary>Click for answer</summary></details>\n\n'
                         i = i + 1
@@ -341,26 +351,36 @@ if __name__ == "__main__":
     print('Extracting other information.')    # Progress report
 
     # Extract other relevant data from the webpage
-    url_element = soup.select_one("meta[property='og:url']")
+    url_element = soup.select_one("meta[property='og:url']") # -> Might change in the future
     url = url_element.get('content', '')
 
     room_code = url.split('/room/',1)[1]
-    room_title = soup.find('h1', 'sc-hBxvHn').string            # old site -> room_title = soup.find('h1', 'bold-head').string
+    room_title = soup.find('h1', 'sc-ePWdyS').string      # sc-hBxvHn      # old site -> room_title = soup.find('h1', 'bold-head').string -> Might change in the future
 
-    image_element = soup.select_one("img[alt='Room Banner']")   # old site -> image_element = soup.select_one('img[id=room-image-large]')
+    image_element = soup.select_one("img[alt='Room Banner']")   # old site -> image_element = soup.select_one('img[id=room-image-large]') -> Might change in the future
     image_link = image_element.get('src', '')
 
     # These lines make up the begin part of the file. From the banner up to the table of contents
 
     # Check if the image can be directly linked or needs to be downloaded.
     if "tryhackme-images.s3.amazonaws.com" in str(image_link):
-        body_text = '![' + room_title + ' Banner](' + github_repo + '/blob/main/' + room_code + '/ROOM_TITLE_Banner.png)\n\n'
+        body_text = '![' + room_title + ' Banner](' + github_repo + '/raw/main/' + room_code + '/' + re.sub(' ','_',room_title) + '_Banner.png)\n\n'
+        
+        # Create file in current directory if github path is not set
+        if github_path:
+            # Write the the resulting strings to a file
+            output_bannername = github_path + '\\' + room_code + '\\' + re.sub(' ','_',room_title) + '.png'
+            # Create destination folder if it doesnt already exists
+            Path(github_path + '\\' + room_code).mkdir(exist_ok=True)
+        else:
+            # Write the the resulting strings to a file
+            output_bannername = re.sub(' ','_',room_title) + '.png'
+
+        urllib.request.urlretrieve(image_link,output_bannername)
     else:
         body_text = '![' + room_title + ' Banner](' + image_link + ')\n\n'
 
-    # Below can be used if the image link does not lead to an image, rather downloads it
-    # https://github.com/Kevinovitz/TryHackMe_Writeups/blob/main/' + room_code + '/ROOM_TITLE_Banner.png
-    body_text += '<p align="center">\n   <img src="' + github_repo + '/blob/main/' + room_code + '/ROOM_TITLE_Cover.png" alt="' + room_title + ' Logo">\n</p>\n\n'
+    body_text += '<p align="center">\n   <img src="' + github_repo + '/raw/main/' + room_code + '/' + re.sub(' ','_',room_title) + '_Cover.png" alt="' + room_title + ' Logo">\n</p>\n\n'
     body_text += '# ' + room_title + '\n\nThis guide contains the answer and steps necessary to get to them for the [' + room_title + '](' + url + ') room.\n\n'
     body_text += '## Table of contents\n\n'
 
