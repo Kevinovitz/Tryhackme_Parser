@@ -1,7 +1,7 @@
 #########################################################################################
 #                                                                                       #
 #   Author: Kevinovitz                                                                  #
-#   Version: 1.4                                                                        #
+#   Version: 1.6                                                                        #
 #                                                                                       #
 #   Description: This script is used to scrape the questions and other information      #
 #   from a tryhackme room. It will then add it to a structure and save to a file.       #
@@ -18,6 +18,12 @@
 #   The body text with the correct Github link etc.                                     #
 #                                                                                       #
 #   Changelog:                                                                          #
+#   1.6 - The correct selectors have been added again...                                #
+#       - Added functionality to check all relevant elements before parsing the webpage #
+#         This ensure no error is given on runtime due to missing elements or wrong     #
+#         selectors.                                                                    #
+#       - Added functionality to prompt before overwriting a file. This prevents a      #
+#         file on github to be altered.                                                 #
 #   1.5 - Due to the new site layout, the element selectors changed. Apparently, they   # 
 #         they have since changed again. I am not sure if this happens everytime or     #
 #         only after a set time.                                                        #
@@ -143,12 +149,14 @@ def login_with_selenium():
         print(f"An error occurred: {e}")
 
 def scrape_webpage_with_selenium(url,driver):
-      
+
+    print('Loading webpage.')    # Progress report
+
     # Open the webpage in the browser
     driver.get(url)
 
     # Wait for the page to load (you might need to adjust the time based on your needs)
-    driver.implicitly_wait(10)
+    driver.implicitly_wait(30)
 
     # Added another second as it usually exits too fast
     time.sleep(3)
@@ -222,6 +230,52 @@ def get_cookies_with_selenium(login_url, username, password):
 
     return cookies
 
+def check_element_presence(page_source):
+
+    error = False
+
+    try:
+        page_source.select_one('div.sc-ilGNfR')
+    except:
+        print('--> The full task element was NOT found on the page! (div.sc-ilGNfR) <--')
+        error = True
+    
+    try:
+        page_source.select_one('span.sc-glPjVa')
+    except:
+        print('--> The task title element was NOT found on the page! (span.sc-glPjVa) <--')
+        error = True
+    
+    try:
+        page_source.select_one('div.sc-kCoybQ')
+    except:
+        print('--> The question task element was NOT found on the page! (div.sc-kCoybQ) <--')
+        error = True
+    
+    try:
+        page_source.select_one("meta[property='og:url']")
+    except:
+        print("--> The url element was NOT found on the page! (meta[property='og:url']) <--")
+        error = True
+    
+    try:
+        page_source.find('h1', 'sc-osFWl')
+    except:
+        print('--> The room title element was NOT found on the page! (sc-osFWl)<--')
+        error = True
+    
+    try:
+        page_source.select_one("img[alt='Room Banner']")
+    except:
+        print("--> The room image element was NOT found on the page! (img[alt='Room Banner']) <--")
+        error = True
+    
+    if error:
+        print('Some of the elements were not found on the webpage. Exiting..')
+        quit()
+    else:
+        return
+
 if __name__ == "__main__":
     
     # Possible to add custom url
@@ -260,12 +314,14 @@ if __name__ == "__main__":
         
         # Set use_cached to true or false. False mean the live webpage will be visited. True means a previously cached version will be used
         soup = scrape_webpage_with_selenium(inputtext,driver)
+
+        check_element_presence(soup)
         
     table_of_contents = ''
     text_questions = '\n'
 
-    # Extract the desired elements using BeautifulSoup methods
-    elements = soup.select('div.sc-kCoybQ') # faHdxz                # old site -> elements = soup.select('div.card[id^="task-"]') -> Might change in the future
+    # Extract the desired elements using BeautifulSoup methods (this should be the entine div of a specific Task n)
+    elements = soup.select('div.sc-ilGNfR') # faHdxz                # old site -> elements = soup.select('div.card[id^="task-"]') -> Might change in the future
 
     # Check if the 'div' element is found before extracting text
     if elements:
@@ -278,7 +334,7 @@ if __name__ == "__main__":
                 print('Extracting task titles.')    # Progress report
         
                 # Extract the desired elements using BeautifulSoup methods
-                task_titles = element.select('span.sc-gPdIsl') # gHZEoh                      # old site -> task_titles = element.select('a.card-link') -> Might change in the future
+                task_titles = element.select('span.sc-glPjVa') # gPdIsl, gHZEoh                      # old site -> task_titles = element.select('a.card-link') -> Might change in the future
 
                 # Check if the 'a' element is found before extracting text
                 if task_titles:
@@ -322,7 +378,7 @@ if __name__ == "__main__":
                 else:
                     print(" 'a' element not found.")
                 
-                questions = element.select('div.sc-cyJUJa') # fKAtdO            # old site -> questions = element.select('div.room-task-question-details') -> Might change in the future
+                questions = element.select('div.sc-kCoybQ') # cyJUJa fKAtdO            # old site -> questions = element.select('div.room-task-question-details') -> Might change in the future
 
                 print('Extracting questions.')    # Progress report
 
@@ -355,7 +411,7 @@ if __name__ == "__main__":
     url = url_element.get('content', '')
 
     room_code = url.split('/room/',1)[1]
-    room_title = soup.find('h1', 'sc-ePWdyS').string      # sc-hBxvHn      # old site -> room_title = soup.find('h1', 'bold-head').string -> Might change in the future
+    room_title = soup.find('h1', 'sc-osFWl').string      # sc-hBxvHn      # old site -> room_title = soup.find('h1', 'bold-head').string -> Might change in the future
 
     image_element = soup.select_one("img[alt='Room Banner']")   # old site -> image_element = soup.select_one('img[id=room-image-large]') -> Might change in the future
     image_link = image_element.get('src', '')
@@ -369,7 +425,7 @@ if __name__ == "__main__":
         # Create file in current directory if github path is not set
         if github_path:
             # Write the the resulting strings to a file
-            output_bannername = github_path + '\\' + room_code + '\\' + re.sub(' ','_',room_title) + '.png'
+            output_bannername = github_path + '\\' + room_code + '\\' + re.sub(' ','_',room_title) + '_Banner.png'
             # Create destination folder if it doesnt already exists
             Path(github_path + '\\' + room_code).mkdir(exist_ok=True)
         else:
@@ -396,10 +452,26 @@ if __name__ == "__main__":
         # Write the the resulting strings to a file
         output_filename = room_code + '.md'
 
-    with open(output_filename, 'w', encoding='utf-8') as file:
-        file.write(body_text)
-        file.write(table_of_contents)
-        file.write(text_questions)
+    if os.path.isfile(output_filename):
+        while True:
+            try:
+                overWrite = input("The file already exists (possibly filled). Would you like to overwrite the file? y = yes, n = no\n")
+                if overWrite == "y":
+                    with open(output_filename, 'w', encoding='utf-8') as file:
+                        file.write(body_text)
+                        file.write(table_of_contents)
+                        file.write(text_questions)
+                    print('Successfully writen to file.')   # Progress report
+                    break
+                if overWrite == "n":
+                    print('Skipping saving to file.')   # Progress report
+                    break
+                else:
+                    print('No valid input was given. Please try again.')   # Progress report
+            except Exception as e:
+                print(f"An error occurred: {e}")
+
+    print('Thank you for using TryhackMe Parser. Come again soon!')   # Progress report
 
     # # Commands below were used to move the writen file. Now the script writes the files to the right folder in the first place.
     # directory_path = github_path + '\\' + room_code
