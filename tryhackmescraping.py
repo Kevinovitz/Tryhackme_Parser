@@ -18,6 +18,9 @@
 #   The body text with the correct Github link etc.                                     #
 #                                                                                       #
 #   Changelog:                                                                          #
+#   1.7 - Fixed an error where the file wouldn't get written to a file if the file      #
+#         didn't already exist.                                                         #
+#       - Changed the selectors again...                                                #
 #   1.6 - The correct selectors have been added again...                                #
 #       - Added functionality to check all relevant elements before parsing the webpage #
 #         This ensure no error is given on runtime due to missing elements or wrong     #
@@ -235,9 +238,9 @@ def check_element_presence(page_source):
     error = False
 
     try:
-        page_source.select_one('div.sc-ilGNfR')
+        page_source.select_one('div.sc-gkKXDf')
     except:
-        print('--> The full task element was NOT found on the page! (div.sc-ilGNfR) <--')
+        print('--> The full task element was NOT found on the page! (div.sc-gkKXDf) <--')
         error = True
     
     try:
@@ -259,9 +262,9 @@ def check_element_presence(page_source):
         error = True
     
     try:
-        page_source.find('h1', 'sc-osFWl')
+        page_source.find('h1', 'sc-SzDBh')
     except:
-        print('--> The room title element was NOT found on the page! (sc-osFWl)<--')
+        print('--> The room title element was NOT found on the page! (sc-SzDBh)<--')
         error = True
     
     try:
@@ -321,7 +324,7 @@ if __name__ == "__main__":
     text_questions = '\n'
 
     # Extract the desired elements using BeautifulSoup methods (this should be the entine div of a specific Task n)
-    elements = soup.select('div.sc-ilGNfR') # faHdxz                # old site -> elements = soup.select('div.card[id^="task-"]') -> Might change in the future
+    elements = soup.select('div.sc-gkKXDf') # faHdxz                # old site -> elements = soup.select('div.card[id^="task-"]') -> Might change in the future
 
     # Check if the 'div' element is found before extracting text
     if elements:
@@ -334,7 +337,7 @@ if __name__ == "__main__":
                 print('Extracting task titles.')    # Progress report
         
                 # Extract the desired elements using BeautifulSoup methods
-                task_titles = element.select('span.sc-glPjVa') # gPdIsl, gHZEoh                      # old site -> task_titles = element.select('a.card-link') -> Might change in the future
+                task_titles = element.select('span.sc-bjbJYN') # gPdIsl, gHZEoh                      # old site -> task_titles = element.select('a.card-link') -> Might change in the future
 
                 # Check if the 'a' element is found before extracting text
                 if task_titles:
@@ -411,7 +414,7 @@ if __name__ == "__main__":
     url = url_element.get('content', '')
 
     room_code = url.split('/room/',1)[1]
-    room_title = soup.find('h1', 'sc-osFWl').string      # sc-hBxvHn      # old site -> room_title = soup.find('h1', 'bold-head').string -> Might change in the future
+    room_title = soup.find('h1', 'sc-SzDBh').string      # sc-hBxvHn      # old site -> room_title = soup.find('h1', 'bold-head').string -> Might change in the future
 
     image_element = soup.select_one("img[alt='Room Banner']")   # old site -> image_element = soup.select_one('img[id=room-image-large]') -> Might change in the future
     image_link = image_element.get('src', '')
@@ -461,7 +464,7 @@ if __name__ == "__main__":
                         file.write(body_text)
                         file.write(table_of_contents)
                         file.write(text_questions)
-                    print('Successfully writen to file.')   # Progress report
+                    print('Successfully writen to existing file.')   # Progress report
                     break
                 if overWrite == "n":
                     print('Skipping saving to file.')   # Progress report
@@ -470,6 +473,12 @@ if __name__ == "__main__":
                     print('No valid input was given. Please try again.')   # Progress report
             except Exception as e:
                 print(f"An error occurred: {e}")
+    else:
+        with open(output_filename, 'w', encoding='utf-8') as file:
+            file.write(body_text)
+            file.write(table_of_contents)
+            file.write(text_questions)
+        print('Successfully writen to file.')   # Progress report
 
     print('Thank you for using TryhackMe Parser. Come again soon!')   # Progress report
 
