@@ -18,6 +18,8 @@
 #   The body text with the correct Github link etc.                                     #
 #                                                                                       #
 #   Changelog:                                                                          #
+#   1.8 - Found a different method of locating the correct elements which should be     #
+#         more robust and not change anymore.                                           #
 #   1.7 - Fixed an error where the file wouldn't get written to a file if the file      #
 #         didn't already exist.                                                         #
 #       - Changed the selectors again...                                                #
@@ -324,7 +326,7 @@ if __name__ == "__main__":
     text_questions = '\n'
 
     # Extract the desired elements using BeautifulSoup methods (this should be the entine div of a specific Task n)
-    elements = soup.select('div.sc-gkKXDf') # faHdxz                # old site -> elements = soup.select('div.card[id^="task-"]') -> Might change in the future
+    elements = soup.find_all('div', {'data-sentry-element':'StyledAccordionWrapper'}) # faHdxz                # old site -> elements = soup.select('div.card[id^="task-"]') -> Might change in the future
 
     # Check if the 'div' element is found before extracting text
     if elements:
@@ -337,7 +339,7 @@ if __name__ == "__main__":
                 print('Extracting task titles.')    # Progress report
         
                 # Extract the desired elements using BeautifulSoup methods
-                task_titles = element.select('span.sc-bjbJYN') # gPdIsl, gHZEoh                      # old site -> task_titles = element.select('a.card-link') -> Might change in the future
+                task_titles = element.find_all('span', {'data-sentry-element':'StyledTaskTitle'}) # gPdIsl, gHZEoh                      # old site -> task_titles = element.select('a.card-link') -> Might change in the future
 
                 # Check if the 'a' element is found before extracting text
                 if task_titles:
@@ -381,7 +383,7 @@ if __name__ == "__main__":
                 else:
                     print(" 'a' element not found.")
                 
-                questions = element.select('div.sc-kCoybQ') # cyJUJa fKAtdO            # old site -> questions = element.select('div.room-task-question-details') -> Might change in the future
+                questions = element.find_all('div', {'data-sentry-component':'QuestionAndAnswerItem'}) # cyJUJa fKAtdO            # old site -> questions = element.select('div.room-task-question-details') -> Might change in the future
 
                 print('Extracting questions.')    # Progress report
 
@@ -394,7 +396,8 @@ if __name__ == "__main__":
                     for question in questions:
                         
                         # Extract text from the div, p, and span elements
-                        text_question = question.get_text(strip=True).removesuffix('Submit')                # The new site layout adds 'Submit' to the end of this element.
+                        temp_question = question.get_text(strip=True).removesuffix('Submit')                # The new site layout adds 'Submit' to the end of this element.
+                        text_question = temp_question.removesuffix('SubmitHint')                            # The new site layout adds 'SubmitHint' to the end of this element.
 
                         #print(f"{i}. {div_text}\n\n\n\n   ><details><summary>Click for answer</summary></details>\n")
                         text_questions += str(i) + '. ' + str(text_question) + '\n\n\n\n   ><details><summary>Click for answer</summary></details>\n\n'
@@ -414,7 +417,7 @@ if __name__ == "__main__":
     url = url_element.get('content', '')
 
     room_code = url.split('/room/',1)[1]
-    room_title = soup.find('h1', 'sc-SzDBh').string      # sc-hBxvHn      # old site -> room_title = soup.find('h1', 'bold-head').string -> Might change in the future
+    room_title = soup.find('h1', {'data-sentry-source-file':'room-description.tsx'}).string      # 'sc-iOoWcT jYsxcI'       sc-hBxvHn      # old site -> room_title = soup.find('h1', 'bold-head').string -> Might change in the future
 
     image_element = soup.select_one("img[alt='Room Banner']")   # old site -> image_element = soup.select_one('img[id=room-image-large]') -> Might change in the future
     image_link = image_element.get('src', '')
