@@ -1,5 +1,46 @@
 Changelog:
 
+1.9
+
+Fixed:
+- Changed the method of downloading the banner image to use request instead of urllib due to some coding warnings by semgrep.
+- Also fixed an issue where the incorrect banner/cover image path was used when saving to a local folder instead of a Github repo.
+
+1.8
+
+Added:
+- Found a different method of locating the correct elements which should be more robust and not change anymore.
+
+1.7
+
+Fixed:
+- Fixed an error where the file wouldn't get written to a file if the file didn't already exist.
+- Changed the selectors again...
+
+1.6
+
+Fixed:
+- The correct selectors have been added again...
+
+Added:
+- Added functionality to check all relevant elements before parsing the webpage. This ensure no error is given on runtime due to missing elements or wrong selectors.                                                                   
+- Added functionality to prompt before overwriting a file. This prevents a file on github to be altered.                                                
+
+1.5
+
+Fixed:
+- Due to the new site layout, the element selectors changed. Apparently, they they have since changed again. I am not sure if this happens everytime or only after a set time.
+- The correct selectors have been added.
+- Time to wait before closing selenium instance has been increased to prevent an incomplete page from being parsed.                                        
+
+Added:
+- Added functionality of downloading the banner image when necessary instead of only changing the url to a file path.                                     
+
+1.4
+
+Added:
+- Created variable to link to a github repo instead of hardcoding mine.        
+
 1.3
 
 Fixed:

@@ -1,7 +1,7 @@
 #########################################################################################
 #                                                                                       #
 #   Author: Kevinovitz                                                                  #
-#   Version: 1.6                                                                        #
+#   Version: 1.9                                                                        #
 #                                                                                       #
 #   Description: This script is used to scrape the questions and other information      #
 #   from a tryhackme room. It will then add it to a structure and save to a file.       #
@@ -18,6 +18,10 @@
 #   The body text with the correct Github link etc.                                     #
 #                                                                                       #
 #   Changelog:                                                                          #
+#   1.9 - Changed the method of downloading the banner image to use request instead of  #
+#         urllib due to some coding warnings by semgrep.                                #
+#         Also fixed an issue where the incorrect banner/cover image path was used      #
+#         when saving to a local folder instead of a Github repo.                       #
 #   1.8 - Found a different method of locating the correct elements which should be     #
 #         more robust and not change anymore.                                           #
 #   1.7 - Fixed an error where the file wouldn't get written to a file if the file      #
@@ -57,7 +61,6 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.common.by import By
-import urllib
 
 # CHANGE THESE VALUES TO YOUR NEEDS
 default_login = 'https://tryhackme.com/login'
@@ -426,23 +429,34 @@ if __name__ == "__main__":
 
     # Check if the image can be directly linked or needs to be downloaded.
     if "tryhackme-images.s3.amazonaws.com" in str(image_link):
-        body_text = '![' + room_title + ' Banner](' + github_repo + '/raw/main/' + room_code + '/' + re.sub(' ','_',room_title) + '_Banner.png)\n\n'
-        
+
         # Create file in current directory if github path is not set
         if github_path:
+            # Start of the file with the banner image file
+            body_text = '![' + room_title + ' Banner](' + github_repo + '/raw/main/' + room_code + '/' + re.sub(' ','_',room_title) + '_Banner.png)\n\n'
             # Write the the resulting strings to a file
             output_bannername = github_path + '\\' + room_code + '\\' + re.sub(' ','_',room_title) + '_Banner.png'
             # Create destination folder if it doesnt already exists
             Path(github_path + '\\' + room_code).mkdir(exist_ok=True)
         else:
+            # Start of the file with the banner image file
+            body_text = '![' + room_title + ' Banner](' + re.sub(' ','_',room_title) + '_Banner.png)\n\n'
             # Write the the resulting strings to a file
-            output_bannername = re.sub(' ','_',room_title) + '.png'
+            output_bannername = re.sub(' ','_',room_title) + '_Banner.png'
 
-        urllib.request.urlretrieve(image_link,output_bannername)
+        with open(output_bannername, 'wb') as bannerfile:
+            for chunk in requests.get(image_link, stream=True).iter_content(chunk_size=128):
+                bannerfile.write(chunk)
+
     else:
         body_text = '![' + room_title + ' Banner](' + image_link + ')\n\n'
 
-    body_text += '<p align="center">\n   <img src="' + github_repo + '/raw/main/' + room_code + '/' + re.sub(' ','_',room_title) + '_Cover.png" alt="' + room_title + ' Logo">\n</p>\n\n'
+    # Use the correct cover image location depending on the save location. Github repo or locally.
+    if github_path:
+        body_text += '<p align="center">\n   <img src="' + github_repo + '/raw/main/' + room_code + '/' + re.sub(' ','_',room_title) + '_Cover.png" alt="' + room_title + ' Logo">\n</p>\n\n'
+    else:
+        body_text += '<p align="center">\n   <img src="' + re.sub(' ','_',room_title) + '_Cover.png" alt="' + room_title + ' Logo">\n</p>\n\n'
+
     body_text += '# ' + room_title + '\n\nThis guide contains the answer and steps necessary to get to them for the [' + room_title + '](' + url + ') room.\n\n'
     body_text += '## Table of contents\n\n'
 
