@@ -1,7 +1,7 @@
 #########################################################################################
 #                                                                                       #
 #   Author: Kevinovitz                                                                  #
-#   Version: 1.9                                                                        #
+#   Version: 2.0                                                                        #
 #                                                                                       #
 #   Description: This script is used to scrape the questions and other information      #
 #   from a tryhackme room. It will then add it to a structure and save to a file.       #
@@ -18,6 +18,12 @@
 #   The body text with the correct Github link etc.                                     #
 #                                                                                       #
 #   Changelog:                                                                          #
+#   2.0 - The correct selectors have been added again...                                #
+#       - Added some more context to some of the error messages.                        #
+#       - Added functionality to remove trailing pieces of text from the questions.     #
+#         This text is located in the submit/hint buttons on the page.                  #
+#       - Added a progress bar to the console output for fun.                           #
+#       - Updated to work with the Advent of Cyber 2024.                                #
 #   1.9 - Changed the method of downloading the banner image to use request instead of  #
 #         urllib due to some coding warnings by semgrep.                                #
 #         Also fixed an issue where the incorrect banner/cover image path was used      #
@@ -70,7 +76,8 @@ default_room = 'https://tryhackme.com/room/encryptioncrypto101'
 github_path = ''                 # Add path to you github writeup repo (C:path\\to\\file). Leave blank if you dont want files to be transferred
 github_repo = ''                 # Add URL to you github writeup repo (https://github.com/username/repo). Make sure to remove any trailing '/'. Leave blank if you won't upload to github.
 write_to_cache = False           # Default is False, when True the resulting parsed webpage will be saved to a temp file.
-use_cached = False               # Default is False, when True the cached webpage will be loaded instead of parsing the live website. Usfull for testing purposes.
+use_cached = False               # Default is False, when True the cached webpage will be loaded instead of parsing the live website. Usefull for testing purposes.
+suffixes = ['SubmitHint','Submit','Complete','Correct AnswerHint','Correct Answer']         # Removes text added to the end of certain questions.
 
 def move_file(destination_path,file_name):
     print('Moving file to new directory.')
@@ -155,6 +162,12 @@ def login_with_selenium():
 
     except Exception as e:
         print(f"An error occurred: {e}")
+
+def remove_suffix(suffixstring, suffixes):
+    for suff in suffixes:
+        if suffixstring.endswith(suff):
+            return suffixstring.removesuffix(suff)
+    return suffixstring
 
 def scrape_webpage_with_selenium(url,driver):
 
@@ -284,6 +297,19 @@ def check_element_presence(page_source):
     else:
         return
 
+def progress(index,len):
+    
+    progress = '['
+    
+    for i in range(index + 1):
+        progress += 'x'
+    
+    for i in range(len - index - 1):
+        progress += ' '
+
+    progress += ']'
+    return progress
+
 if __name__ == "__main__":
     
     # Possible to add custom url
@@ -310,12 +336,12 @@ if __name__ == "__main__":
             current_url = driver.current_url
 
             # Check if log in was successfull
-            if current_url == 'https://tryhackme.com/dashboard' or current_url == 'https://tryhackme.com/paths':
+            if current_url == 'https://tryhackme.com/dashboard' or current_url == 'https://tryhackme.com/paths' or current_url == 'https://tryhackme.com/r/dashboard':
                 not_logged_in = False
                 print("Log in successfull!")
 
             else:
-                print("Something went wrong when trying to login. Please try again.")
+                print("Something went wrong when trying to login. The current URL doesn't match. Current URL is: " + current_url + " Please try again.")
 
                 # Quit the driver
                 driver.quit()
@@ -329,21 +355,27 @@ if __name__ == "__main__":
     text_questions = '\n'
 
     # Extract the desired elements using BeautifulSoup methods (this should be the entine div of a specific Task n)
-    elements = soup.find_all('div', {'data-sentry-element':'StyledAccordionWrapper'}) # faHdxz                # old site -> elements = soup.select('div.card[id^="task-"]') -> Might change in the future
+    elements = soup.find_all('div', {'class':'sc-bDOdhi'}) # soup.find_all('div', {'data-sentry-element':'StyledAccordionWrapper'}) # faHdxz                # old site -> elements = soup.select('div.card[id^="task-"]') -> Might change in the future
 
     # Check if the 'div' element is found before extracting text
     if elements:
         
-        for element in elements:
+        print(str(len(elements)) + ' tasks found.') # Output the nr of tasks found on the page.
+
+        for index, element in enumerate(elements):
             
+            # print('Processing task ' + str(index) + ' of ' + str(len(elements)) + '.')
             # For each entry check if there is a question which needs an answer. If not, it won't be included in the ToC
             if "Answer format" in str(element):
+                #print(element)
+                
+                progress_bar = progress(index,len(elements)) # create a progress bar for the current elementc
 
-                print('Extracting task titles.')    # Progress report
+                print(progress_bar + ' Extracting task titles.')    # Progress report
         
                 # Extract the desired elements using BeautifulSoup methods
-                task_titles = element.find_all('span', {'data-sentry-element':'StyledTaskTitle'}) # gPdIsl, gHZEoh                      # old site -> task_titles = element.select('a.card-link') -> Might change in the future
-
+                task_titles = element.find_all('span', class_='sc-uYXSi') #  element.find_all('span', {'data-sentry-element':'StyledTaskTitle'}) # gPdIsl, gHZEoh                      # old site -> task_titles = element.select('a.card-link') -> Might change in the future
+                #print(task_titles)
                 # Check if the 'a' element is found before extracting text
                 if task_titles:
                     
@@ -369,14 +401,14 @@ if __name__ == "__main__":
 
                             # Remove any special characters from the title except for spaces
                             stripped_task_title = re.sub(r"[^ a-zA-Z0-9]+",'',str(task_title.strip()))
-                            
+
                             # Replace all spaces with dashes
                             if ' ' in stripped_task_title:
-                                stripped_task_title = str(task_title.strip()).replace(' ', '-')
-                            
+                                stripped_task_title = str(stripped_task_title.strip()).replace(' ', '-')
+
                             # Remove all commas
                             if ',' in stripped_task_title:
-                                stripped_task_title = str(task_title.strip()).replace(',', '')
+                                stripped_task_title = str(stripped_task_title.strip()).replace(',', '')
 
                             text_questions += '### ' + task_title.strip() + '\n\n'
                             table_of_contents += '- [' + str(task_title.strip()) + '](#' + stripped_task_title.lower() + ')\n'
@@ -384,11 +416,13 @@ if __name__ == "__main__":
                         else:
                             print("No text directly within the 'a' element.")
                 else:
-                    print(" 'a' element not found.")
+                    print("No Task titles were found.")
                 
                 questions = element.find_all('div', {'data-sentry-component':'QuestionAndAnswerItem'}) # cyJUJa fKAtdO            # old site -> questions = element.select('div.room-task-question-details') -> Might change in the future
+                
+                progress_bar = progress(index,len(elements)) # create a progress bar for the current elementc
 
-                print('Extracting questions.')    # Progress report
+                print(progress_bar + ' Extracting questions.')    # Progress report
 
                 # Check if the div element is found before extracting text
                 if questions:
@@ -399,19 +433,23 @@ if __name__ == "__main__":
                     for question in questions:
                         
                         # Extract text from the div, p, and span elements
-                        temp_question = question.get_text(strip=True).removesuffix('Submit')                # The new site layout adds 'Submit' to the end of this element.
-                        text_question = temp_question.removesuffix('SubmitHint')                            # The new site layout adds 'SubmitHint' to the end of this element.
+                        temp_question = question.get_text(strip=True)#.removesuffix('Submit')                # The new site layout adds 'Submit' to the end of this element.
+                        
+                        text_question = remove_suffix(temp_question,suffixes)
+                        
+                        #text_question = temp_question.removesuffix('SubmitHint')                            # The new site layout adds 'SubmitHint' to the end of this element.
 
                         #print(f"{i}. {div_text}\n\n\n\n   ><details><summary>Click for answer</summary></details>\n")
                         text_questions += str(i) + '. ' + str(text_question) + '\n\n\n\n   ><details><summary>Click for answer</summary></details>\n\n'
                         i = i + 1
 
                 else:
-                    print("<div> element not found.")
+                    print("No questions were extracted, <div> element not found.")
             else:
-                print("No answers are required for this task, skipping.")
+                progress_bar = progress(index,len(elements)) # create a progress bar for the current elementc
+                print(progress_bar + " No answers are required for this task, skipping.")
     else:
-        print("<div> element not found.")
+        print("No text was extracted, <div> element not found.")
 
     print('Extracting other information.')    # Progress report
 

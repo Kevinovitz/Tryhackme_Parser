@@ -1,5 +1,16 @@
 Changelog:
 
+2.0
+
+Fixed:
+- The correct selectors have been added again...
+- Updated to work with the Advent of Cyber 2024.
+
+Added:
+- Added some more context to some of the error messages.
+- Added functionality to remove trailing pieces of text from the questions. This text is located in the submit/hint buttons on the page.
+- Added a progress bar to the console output for fun.
+
 1.9
 
 Fixed:
