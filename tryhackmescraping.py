@@ -18,6 +18,7 @@
 #   The body text with the correct Github link etc.                                     #
 #                                                                                       #
 #   Changelog:                                                                          #
+#   2.0.1 - The correct selectors have been added again...                              #
 #   2.0 - The correct selectors have been added again...                                #
 #       - Added some more context to some of the error messages.                        #
 #       - Added functionality to remove trailing pieces of text from the questions.     #
@@ -313,7 +314,7 @@ def progress(index,len):
 if __name__ == "__main__":
     
     # Possible to add custom url
-    inputtext = input("Please add the url here.")
+    inputtext = input("Please add the url here. ")
 
     if not inputtext:
         # Replace 'your_url' with the URL of the webpage you want to scrape
@@ -355,7 +356,7 @@ if __name__ == "__main__":
     text_questions = '\n'
 
     # Extract the desired elements using BeautifulSoup methods (this should be the entine div of a specific Task n)
-    elements = soup.find_all('div', {'class':'sc-bDOdhi'}) # soup.find_all('div', {'data-sentry-element':'StyledAccordionWrapper'}) # faHdxz                # old site -> elements = soup.select('div.card[id^="task-"]') -> Might change in the future
+    elements = soup.find_all('div', {'class':'sc-kNlxZa'}) # soup.find_all('div', {'data-sentry-element':'StyledAccordionWrapper'}) # faHdxz                # old site -> elements = soup.select('div.card[id^="task-"]') -> Might change in the future
 
     # Check if the 'div' element is found before extracting text
     if elements:
@@ -374,7 +375,7 @@ if __name__ == "__main__":
                 print(progress_bar + ' Extracting task titles.')    # Progress report
         
                 # Extract the desired elements using BeautifulSoup methods
-                task_titles = element.find_all('span', class_='sc-uYXSi') #  element.find_all('span', {'data-sentry-element':'StyledTaskTitle'}) # gPdIsl, gHZEoh                      # old site -> task_titles = element.select('a.card-link') -> Might change in the future
+                task_titles = element.find_all('span', class_='sc-hQfNDv') #  element.find_all('span', {'data-sentry-element':'StyledTaskTitle'}) # gPdIsl, gHZEoh                      # old site -> task_titles = element.select('a.card-link') -> Might change in the future
                 #print(task_titles)
                 # Check if the 'a' element is found before extracting text
                 if task_titles:
