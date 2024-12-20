@@ -18,6 +18,10 @@
 #   The body text with the correct Github link etc.                                     #
 #                                                                                       #
 #   Changelog:                                                                          #
+#   2.1 - Much more reliable search method has been implemented to find all task        #
+#         elements without relying on the everchanging "class" property.                #
+#         Applies to "task_parent_element" and "task_titles".                           #
+#       - Changed the login field names since a new design was made.                    #
 #   2.0.1 - The correct selectors have been added again...                              #
 #   2.0 - The correct selectors have been added again...                                #
 #       - Added some more context to some of the error messages.                        #
@@ -129,9 +133,9 @@ def login_with_selenium():
         driver.implicitly_wait(10)
 
         # Find and fill in the login form fields using the new method
-        username_field = driver.find_element(By.NAME, 'email')
+        username_field = driver.find_element(By.NAME, 'usernameOrEmail') # was 'email'
         password_field = driver.find_element(By.NAME, 'password')
-        submit_button = driver.find_element(By.XPATH, "//*[@id='wrapper']/div[2]/form/button")  # Replace with the actual name attribute of the submit button
+        submit_button = driver.find_element(By.XPATH, "//*[@type='submit']")  # Replace with the actual name attribute of the submit button
 
         # Do something with the input fields (e.g., enter values)
         username_field.clear()
@@ -158,6 +162,10 @@ def login_with_selenium():
 
         # Login
         submit_button.click()
+
+        time.sleep(3)
+
+        #WebDriverWait(driver, 30, 1).until_not(lambda x: x.find_element(By.TYPE, "submit").is_displayed())
 
         return driver
 
@@ -355,8 +363,18 @@ if __name__ == "__main__":
     table_of_contents = ''
     text_questions = '\n'
 
+    # Locate the single parent div with the stable data-* attributes, because the class property constantly changes. This function is commented out below.
+    task_parent_element = soup.find('div', {
+        'data-sentry-element': 'StyledTaskWrapper',
+        'data-sentry-component': 'Tasks',
+        'data-sentry-source-file': 'tasks.tsx'
+    })
+
+    # Find all child div elements one layer down
+    elements = task_parent_element.find_all('div', recursive=False)  # recursive=False ensures only direct children are found
+
     # Extract the desired elements using BeautifulSoup methods (this should be the entine div of a specific Task n)
-    elements = soup.find_all('div', {'class':'sc-kNlxZa'}) # soup.find_all('div', {'data-sentry-element':'StyledAccordionWrapper'}) # faHdxz                # old site -> elements = soup.select('div.card[id^="task-"]') -> Might change in the future
+    # elements = soup.find_all('div', {'class':'sc-eBAZHg'}) # soup.find_all('div', {'data-sentry-element':'StyledAccordionWrapper'}) # faHdxz                # old site -> elements = soup.select('div.card[id^="task-"]') -> Might change in the future
 
     # Check if the 'div' element is found before extracting text
     if elements:
@@ -374,8 +392,12 @@ if __name__ == "__main__":
 
                 print(progress_bar + ' Extracting task titles.')    # Progress report
         
+                # Find all span elements with data-testid containing 'title-', because the class property constantly changes. This function is commented out below.
+                task_titles = element.find_all('span', attrs={'data-testid': re.compile(r'^title-\d+')})
+
                 # Extract the desired elements using BeautifulSoup methods
-                task_titles = element.find_all('span', class_='sc-hQfNDv') #  element.find_all('span', {'data-sentry-element':'StyledTaskTitle'}) # gPdIsl, gHZEoh                      # old site -> task_titles = element.select('a.card-link') -> Might change in the future
+                # task_titles = element.find_all('span', class_='sc-loOCLO') #  element.find_all('span', {'data-sentry-element':'StyledTaskTitle'}) # gPdIsl, gHZEoh                      # old site -> task_titles = element.select('a.card-link') -> Might change in the future
+                
                 #print(task_titles)
                 # Check if the 'a' element is found before extracting text
                 if task_titles:
