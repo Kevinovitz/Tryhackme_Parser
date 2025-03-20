@@ -1,7 +1,7 @@
 #########################################################################################
 #                                                                                       #
 #   Author: Kevinovitz                                                                  #
-#   Version: 2.0                                                                        #
+#   Version: 2.2                                                                        #
 #                                                                                       #
 #   Description: This script is used to scrape the questions and other information      #
 #   from a tryhackme room. It will then add it to a structure and save to a file.       #
@@ -18,6 +18,7 @@
 #   The body text with the correct Github link etc.                                     #
 #                                                                                       #
 #   Changelog:                                                                          #
+#   2.2 - Changed task identification criteria as the placholder text was changed.      #                                                                          #
 #   2.1 - Much more reliable search method has been implemented to find all task        #
 #         elements without relying on the everchanging "class" property.                #
 #         Applies to "task_parent_element" and "task_titles".                           #
@@ -82,7 +83,7 @@ github_path = ''                 # Add path to you github writeup repo (C:path\\
 github_repo = ''                 # Add URL to you github writeup repo (https://github.com/username/repo). Make sure to remove any trailing '/'. Leave blank if you won't upload to github.
 write_to_cache = False           # Default is False, when True the resulting parsed webpage will be saved to a temp file.
 use_cached = False               # Default is False, when True the cached webpage will be loaded instead of parsing the live website. Usefull for testing purposes.
-suffixes = ['SubmitHint','Submit','Complete','Correct AnswerHint','Correct Answer']         # Removes text added to the end of certain questions.
+suffixes = ['SubmitHint','Submit','Complete','Correct AnswerHint','Correct Answer','CompleteHint']         # Removes text added to the end of certain questions.
 
 def move_file(destination_path,file_name):
     print('Moving file to new directory.')
@@ -385,7 +386,8 @@ if __name__ == "__main__":
             
             # print('Processing task ' + str(index) + ' of ' + str(len(elements)) + '.')
             # For each entry check if there is a question which needs an answer. If not, it won't be included in the ToC
-            if "Answer format" in str(element):
+            if 'placeholder=""' in str(element):
+            # if "Answer format" in str(element):- # Layout has changed and removed this string from questions that need an answer.
                 #print(element)
                 
                 progress_bar = progress(index,len(elements)) # create a progress bar for the current elementc
