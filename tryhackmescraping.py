@@ -18,6 +18,14 @@
 #   The body text with the correct Github link etc.                                     #
 #                                                                                       #
 #   Changelog:                                                                          #
+#   3.0 - Big update due to a significant backend change of the website. Each task      #
+#         is now only loaded when the task has been expanded. It will unload once the   #
+#         the task has been collapsed again. This requires interaction with the webpage #
+#         before the necessary source data can be captured. Each task needs to be       #
+#         expanded and the loaded task data exported seperately.                        #
+#       - Added progress bar for the loading and saving of each task.                   #
+#       - Added function to handle the new process. This doesn't change the original    #
+#         workflow. New function can be removed to restore the original functionality   #
 #   2.2 - Changed task identification criteria as the placholder text was changed.      #                                                                          #
 #   2.1 - Much more reliable search method has been implemented to find all task        #
 #         elements without relying on the everchanging "class" property.                #
@@ -179,6 +187,95 @@ def remove_suffix(suffixstring, suffixes):
             return suffixstring.removesuffix(suff)
     return suffixstring
 
+def expand_and_update(soup, driver):
+
+    print("locating items")
+    # Locate the single parent div with the stable data-* attributes, because the class property constantly changes. This function is commented out below.
+    task_elements = driver.find_elements(By.XPATH, '//*[contains(@id, "header-")]')
+    #(By.CSS_SELECTOR("[id^=header-]"))
+    # Find all child div elements one layer down
+    #task_elements = task_parent_element.find_all('div', recursive=False)  # recursive=False ensures only direct children are found
+
+    print(f"Found {len(task_elements)} tasks.")
+    print("Saving content.")
+
+    # Iterate over each task element and expand it one by one
+    for task_index, task in enumerate(task_elements):
+        
+        progress_bar = ''
+        progress_bar = progress(task_index,len(task_elements))
+        print(progress_bar, end='\r')
+        # Find the button that expands/collapses the task (identified by role="button")
+        expand_button = task.find_element(By.XPATH, f"//*[@id='{task.get_attribute('id')}']")
+                                          #XPATH, f"//div[@id={task.get_attribute('id')}]")
+                                          #CSS_SELECTOR, f"div#{task.get_attribute('id')}[role='button']")
+                                          #XPATH, f'//div[@role="button"]') 
+        #XPATH, f'//div[@role="button" and @id={task.get_attribute("id")}]') 
+        #ID, task.get_attribute("id"))   #
+        
+        # Click the button to expand the task
+        expand_button.click()
+        
+        # Wait for the task to fully expand. Adjust the wait condition based on how the page behaves
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.ID, "accordion-details"))  # Wait for content to appear
+            # EC.presence_of_element_located((By.CSS_SELECTOR, f'#content-{task.get_attribute("id")}'))  # Wait for content to appear
+        )
+        
+        # Optionally, add a short delay to ensure stability after expansion
+        time.sleep(1)
+        
+        # Now, get the updated page source after this task has expanded
+        updated_page_source = driver.page_source
+        
+        
+        # Parse the updated page source
+        updated_soup = BeautifulSoup(updated_page_source, 'html.parser')
+        
+        # Find the parent element in the parsed page source
+        updated_task_parent_element = updated_soup.find('div', {
+            'data-sentry-element': 'StyledTaskWrapper',
+            'data-sentry-component': 'Tasks',
+            'data-sentry-source-file': 'tasks.tsx'
+        })
+        
+        # Find all the task elements within the parent element (in the updated soup)
+        updated_task_elements = updated_task_parent_element.find_all('div', recursive=False)
+        
+        # Now, grab the current task, which should be expanded
+        expanded_task = updated_task_elements[task_index]  # We use task_index to track the task
+        
+        #print(expanded_task)
+        # Step 1: Get the class names of the updated task element
+        updated_task_class = expanded_task.get('class', [])
+        #print(updated_task_class[0])
+        if len(updated_task_class) > 1:
+            updated_task_class = updated_task_class[0]# + " " + updated_task_class[1]
+        # # Step 2: Find the matching task element in the original `soup`
+        #print(soup)
+        for soup_index, original_task in enumerate(soup.find_all('div', class_=updated_task_class, recursive=True)):
+            # Check if the class names match
+            #print(original_task)
+            if soup_index == task_index:
+                # Step 3: Replace the original task with the expanded task
+                
+                original_task.replace_with(expanded_task)
+                break  # Stop once we find and replace the matching task
+        # with open('soup.txt', 'w', encoding='utf-8') as file:
+        #     file.write(str(soup))    
+        
+    #     # Add the expanded task to a list
+    #     expanded_tasks = expanded_task.add(expanded_task)
+
+    #     # Step 1: Get the class names of the updated task element
+    #     updated_task_class = expanded_task.get('class', [])
+        
+    # for soup_index, soup_task in soup.findall('div', class_=updated_task_class, recursive=False):
+    #     soup_task.replace_with(expanded_tasks[soup_index])
+
+
+    return soup
+
 def scrape_webpage_with_selenium(url,driver):
 
     print('Loading webpage.')    # Progress report
@@ -195,14 +292,17 @@ def scrape_webpage_with_selenium(url,driver):
     # Get the HTML content after JavaScript has executed
     page_source = driver.page_source
 
-    # Close the browser
-    driver.quit()
-
     print('Parsing webpage.')    # Progress report
 
     # Parse the HTML content of the page
     soup = BeautifulSoup(page_source, 'html.parser')
     
+    # New website layout requires each task to be expanded so it loads. Whenever it is collapsed the content is unloaded
+    soup = expand_and_update(soup, driver)
+    
+    # Close the browser
+    driver.quit()
+
     # Export the parsed html object to use a cache.
     if write_to_cache:
     
@@ -373,7 +473,7 @@ if __name__ == "__main__":
 
     # Find all child div elements one layer down
     elements = task_parent_element.find_all('div', recursive=False)  # recursive=False ensures only direct children are found
-
+    
     # Extract the desired elements using BeautifulSoup methods (this should be the entine div of a specific Task n)
     # elements = soup.find_all('div', {'class':'sc-eBAZHg'}) # soup.find_all('div', {'data-sentry-element':'StyledAccordionWrapper'}) # faHdxz                # old site -> elements = soup.select('div.card[id^="task-"]') -> Might change in the future
 
