@@ -1,7 +1,7 @@
 #########################################################################################
 #                                                                                       #
 #   Author: Kevinovitz                                                                  #
-#   Version: 2.2                                                                        #
+#   Version: 3.0                                                                        #
 #                                                                                       #
 #   Description: This script is used to scrape the questions and other information      #
 #   from a tryhackme room. It will then add it to a structure and save to a file.       #
