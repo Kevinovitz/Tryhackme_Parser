@@ -1,7 +1,7 @@
 #########################################################################################
 #                                                                                       #
 #   Author: Kevinovitz                                                                  #
-#   Version: 3.0                                                                        #
+#   Version: 3.1                                                                        #
 #                                                                                       #
 #   Description: This script is used to scrape the questions and other information      #
 #   from a tryhackme room. It will then add it to a structure and save to a file.       #
@@ -18,6 +18,8 @@
 #   The body text with the correct Github link etc.                                     #
 #                                                                                       #
 #   Changelog:                                                                          #
+#   3.1 - Small modifications made to correctly identify relevant sections, tasks, and  #
+#         questions. Identifiers had changed.                                           #
 #   3.0 - Big update due to a significant backend change of the website. Each task      #
 #         is now only loaded when the task has been expanded. It will unload once the   #
 #         the task has been collapsed again. This requires interaction with the webpage #
@@ -26,7 +28,7 @@
 #       - Added progress bar for the loading and saving of each task.                   #
 #       - Added function to handle the new process. This doesn't change the original    #
 #         workflow. New function can be removed to restore the original functionality   #
-#   2.2 - Changed task identification criteria as the placholder text was changed.      #                                                                          #
+#   2.2 - Changed task identification criteria as the placholder text was changed.      #
 #   2.1 - Much more reliable search method has been implemented to find all task        #
 #         elements without relying on the everchanging "class" property.                #
 #         Applies to "task_parent_element" and "task_titles".                           #
@@ -78,6 +80,7 @@ from pathlib import Path
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.common.by import By
@@ -133,7 +136,14 @@ def login_with_selenium():
         print('Loading Selenium driver.')    # Progress report
 
         # Create a new instance of the Chrome driver (you can use other browsers too)
-        driver = webdriver.Firefox()
+        profile = Options()
+        # -----------------------------
+        # 2. Disable webdriver detection flags
+        # -----------------------------
+        profile.set_preference("dom.webdriver.enabled", False)
+        profile.set_preference("useAutomationExtension", False)
+        profile.set_preference("media.navigator.enabled", False)
+        driver = webdriver.Firefox(options=profile)
 
         # Open the webpage in the browser
         driver.get(default_login)
@@ -213,8 +223,10 @@ def expand_and_update(soup, driver):
         #XPATH, f'//div[@role="button" and @id={task.get_attribute("id")}]') 
         #ID, task.get_attribute("id"))   #
         
-        # Click the button to expand the task
-        expand_button.click()
+        # Only click the task when not looking at the first task as this is automatically expanded.
+        if not task_index == 0:
+            # Click the button to expand the task
+            expand_button.click()
         
         # Wait for the task to fully expand. Adjust the wait condition based on how the page behaves
         WebDriverWait(driver, 10).until(
@@ -228,14 +240,13 @@ def expand_and_update(soup, driver):
         # Now, get the updated page source after this task has expanded
         updated_page_source = driver.page_source
         
-        
         # Parse the updated page source
         updated_soup = BeautifulSoup(updated_page_source, 'html.parser')
         
         # Find the parent element in the parsed page source
         updated_task_parent_element = updated_soup.find('div', {
             'data-sentry-element': 'StyledTaskWrapper',
-            'data-sentry-component': 'Tasks',
+            #'data-sentry-component': 'Tasks',                              # Removed tag as it wasn't found on the page anymore.
             'data-sentry-source-file': 'tasks.tsx'
         })
         
@@ -299,9 +310,6 @@ def scrape_webpage_with_selenium(url,driver):
     
     # New website layout requires each task to be expanded so it loads. Whenever it is collapsed the content is unloaded
     soup = expand_and_update(soup, driver)
-    
-    # Close the browser
-    driver.quit()
 
     # Export the parsed html object to use a cache.
     if write_to_cache:
@@ -309,6 +317,9 @@ def scrape_webpage_with_selenium(url,driver):
         with open('parsed_page.txt', 'w', encoding='utf-8') as file:
             file.write(str(soup))    
 
+    # Close the browser
+    driver.quit()
+    
     return soup
 
 # This function doesn't work, but is left in place for reference (to login using cookies instead of manually).
@@ -467,7 +478,7 @@ if __name__ == "__main__":
     # Locate the single parent div with the stable data-* attributes, because the class property constantly changes. This function is commented out below.
     task_parent_element = soup.find('div', {
         'data-sentry-element': 'StyledTaskWrapper',
-        'data-sentry-component': 'Tasks',
+        # 'data-sentry-component': 'Tasks',                              # Removed tag as it wasn't found on the page anymore.
         'data-sentry-source-file': 'tasks.tsx'
     })
 
@@ -486,7 +497,8 @@ if __name__ == "__main__":
             
             # print('Processing task ' + str(index) + ' of ' + str(len(elements)) + '.')
             # For each entry check if there is a question which needs an answer. If not, it won't be included in the ToC
-            if 'placeholder=""' in str(element):
+            # if 'placeholder=""' in str(element): # Some rooms use a different placeholder text. So I changed it to exclude the no answer placeholder instead.
+            if not 'placeholder="No answer needed"' in str(element):
             # if "Answer format" in str(element):- # Layout has changed and removed this string from questions that need an answer.
                 #print(element)
                 
@@ -543,7 +555,8 @@ if __name__ == "__main__":
                 else:
                     print("No Task titles were found.")
                 
-                questions = element.find_all('div', {'data-sentry-component':'QuestionAndAnswerItem'}) # cyJUJa fKAtdO            # old site -> questions = element.select('div.room-task-question-details') -> Might change in the future
+                questions = element.find_all('div', {'data-sentry-element':'StyledQuestion'}) # question div changed from component to element.
+                # questions = element.find_all('div', {'data-sentry-component':'QuestionAndAnswerItem'}) # cyJUJa fKAtdO            # old site -> questions = element.select('div.room-task-question-details') -> Might change in the future
                 
                 progress_bar = progress(index,len(elements)) # create a progress bar for the current elementc
 
