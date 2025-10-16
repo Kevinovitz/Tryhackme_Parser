@@ -1,7 +1,7 @@
 #########################################################################################
 #                                                                                       #
 #   Author: Kevinovitz                                                                  #
-#   Version: 3.1                                                                        #
+#   Version: 3.2                                                                        #
 #                                                                                       #
 #   Description: This script is used to scrape the questions and other information      #
 #   from a tryhackme room. It will then add it to a structure and save to a file.       #
@@ -18,6 +18,7 @@
 #   The body text with the correct Github link etc.                                     #
 #                                                                                       #
 #   Changelog:                                                                          #
+#   3.2 - Added some error handling and combined changed identifiers.                   #
 #   3.1 - Small modifications made to correctly identify relevant sections, tasks, and  #
 #         questions. Identifiers had changed.                                           #
 #   3.0 - Big update due to a significant backend change of the website. Each task      #
@@ -76,6 +77,7 @@ import time
 import requests
 import os
 import shutil
+import sys
 from pathlib import Path
 from bs4 import BeautifulSoup
 from selenium import webdriver
@@ -84,6 +86,7 @@ from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.common.by import By
+from selenium.common.exceptions import TimeoutException
 
 # CHANGE THESE VALUES TO YOUR NEEDS
 default_login = 'https://tryhackme.com/login'
@@ -95,6 +98,10 @@ github_repo = ''                 # Add URL to you github writeup repo (https://g
 write_to_cache = False           # Default is False, when True the resulting parsed webpage will be saved to a temp file.
 use_cached = False               # Default is False, when True the cached webpage will be loaded instead of parsing the live website. Usefull for testing purposes.
 suffixes = ['SubmitHint','Submit','Complete','Correct AnswerHint','Correct Answer','CompleteHint']         # Removes text added to the end of certain questions.
+
+def error_exit():
+    driver.close
+    sys.exit()
 
 def move_file(destination_path,file_name):
     print('Moving file to new directory.')
@@ -197,6 +204,17 @@ def remove_suffix(suffixstring, suffixes):
             return suffixstring.removesuffix(suff)
     return suffixstring
 
+# Checks if the task element is already expanded as to not click on the element and close it.
+def is_accordion_expanded(driver):
+    try:
+        # Wait up to 2 seconds for the element to be visible (meaning expanded)
+        WebDriverWait(driver, 2).until(
+            EC.visibility_of_element_located((By.ID, "accordion-details"))
+        )
+        return True  # Element is visible → expanded
+    except TimeoutException:
+        return False  # Element is not visible → not expanded
+
 def expand_and_update(soup, driver):
 
     print("locating items")
@@ -222,12 +240,16 @@ def expand_and_update(soup, driver):
                                           #XPATH, f'//div[@role="button"]') 
         #XPATH, f'//div[@role="button" and @id={task.get_attribute("id")}]') 
         #ID, task.get_attribute("id"))   #
-        
-        # Only click the task when not looking at the first task as this is automatically expanded.
-        if not task_index == 0:
-            # Click the button to expand the task
+
+        # The first task is automatically opened. This check if we are looking for the first task and if so check if it is already opened.
+        if task_index == 0:
+            if not is_accordion_expanded(driver):
+                # Click the button to expand the task (if not already expanded).
+                expand_button.click()
+        else:
+            # Click the button to expand the task (if not already expanded).
             expand_button.click()
-        
+
         # Wait for the task to fully expand. Adjust the wait condition based on how the page behaves
         WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.ID, "accordion-details"))  # Wait for content to appear
@@ -251,7 +273,11 @@ def expand_and_update(soup, driver):
         })
         
         # Find all the task elements within the parent element (in the updated soup)
-        updated_task_elements = updated_task_parent_element.find_all('div', recursive=False)
+        if updated_task_parent_element == None:
+            print("!!!!!! ERROR !!!!!! \n The task element variable is empty. Please review the filters used to identify the correct element. Line 246.")
+            error_exit()
+        else:
+            updated_task_elements = updated_task_parent_element.find_all('div', recursive=False)
         
         # Now, grab the current task, which should be expanded
         expanded_task = updated_task_elements[task_index]  # We use task_index to track the task
@@ -259,6 +285,7 @@ def expand_and_update(soup, driver):
         #print(expanded_task)
         # Step 1: Get the class names of the updated task element
         updated_task_class = expanded_task.get('class', [])
+
         #print(updated_task_class[0])
         if len(updated_task_class) > 1:
             updated_task_class = updated_task_class[0]# + " " + updated_task_class[1]
@@ -319,7 +346,7 @@ def scrape_webpage_with_selenium(url,driver):
 
     # Close the browser
     driver.quit()
-    
+
     return soup
 
 # This function doesn't work, but is left in place for reference (to login using cookies instead of manually).
@@ -467,7 +494,7 @@ if __name__ == "__main__":
                 # Quit the driver
                 driver.quit()
         
-        # Set use_cached to true or false. False mean the live webpage will be visited. True means a previously cached version will be used
+        # Set use_cached to true or false. False means the live webpage will be visited. True means a previously cached version will be used
         soup = scrape_webpage_with_selenium(inputtext,driver)
 
         check_element_presence(soup)
@@ -483,7 +510,11 @@ if __name__ == "__main__":
     })
 
     # Find all child div elements one layer down
-    elements = task_parent_element.find_all('div', recursive=False)  # recursive=False ensures only direct children are found
+    if task_parent_element == None:
+            print("!!!!!! ERROR !!!!!! \n The task parent element variable is empty. Please review the filters used to identify the correct element. This might mean the page source variable is not updated with the expanded page source (expand_and_update). Line 488.")
+            error_exit()
+    else:
+        elements = task_parent_element.find_all('div', recursive=False)  # recursive=False ensures only direct children are found
     
     # Extract the desired elements using BeautifulSoup methods (this should be the entine div of a specific Task n)
     # elements = soup.find_all('div', {'class':'sc-eBAZHg'}) # soup.find_all('div', {'data-sentry-element':'StyledAccordionWrapper'}) # faHdxz                # old site -> elements = soup.select('div.card[id^="task-"]') -> Might change in the future
@@ -555,9 +586,13 @@ if __name__ == "__main__":
                 else:
                     print("No Task titles were found.")
                 
-                questions = element.find_all('div', {'data-sentry-element':'StyledQuestion'}) # question div changed from component to element.
+                # In case this ever changes in the future. The specified 'div' should be the one containing both the question as well as the input box and button for one question only.
+                questions = element.find_all('div', {
+                    'data-sentry-source-file':'question-and-answer-item.tsx',
+                    'data-sentry-element':'StyledQuestion'
+                    })  # question div changed from component to element.
                 # questions = element.find_all('div', {'data-sentry-component':'QuestionAndAnswerItem'}) # cyJUJa fKAtdO            # old site -> questions = element.select('div.room-task-question-details') -> Might change in the future
-                
+
                 progress_bar = progress(index,len(elements)) # create a progress bar for the current elementc
 
                 print(progress_bar + ' Extracting questions.')    # Progress report
@@ -582,7 +617,7 @@ if __name__ == "__main__":
                         i = i + 1
 
                 else:
-                    print("No questions were extracted, <div> element not found.")
+                    print("No questions were extracted, <div> element(s) containing the questions was not found.")
             else:
                 progress_bar = progress(index,len(elements)) # create a progress bar for the current elementc
                 print(progress_bar + " No answers are required for this task, skipping.")
