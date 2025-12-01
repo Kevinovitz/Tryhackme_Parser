@@ -1,5 +1,31 @@
 Changelog:
 
+3.3
+
+Fixed:
+- Modified the task element identifier as it would mistakenly include an unrelated element.
+
+3.2
+
+Fixed:
+- Added some error handling and combined changed identifiers.
+
+3.1
+
+Fixed:
+- Small modifications made to correctly identify relevant sections, tasks, and questions. Identifiers had changed.
+
+3.0
+
+Fixed:
+
+- Big update due to a significant backend change of the website. Each task is now only loaded when the task has been expanded. It will unload once the task has been collapsed again. This requires interaction with the webpage before the necessary source data can be captured. Each task needs to be expanded and the loaded task data exported seperately.
+
+Added:
+
+- Added progress bar for the loading and saving of each task.
+- Added function to handle the new process. This doesn't change the original workflow. New function can be removed to restore the original functionality
+
 2.0
 
 Fixed:

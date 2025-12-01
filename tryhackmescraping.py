@@ -1,7 +1,7 @@
 #########################################################################################
 #                                                                                       #
 #   Author: Kevinovitz                                                                  #
-#   Version: 3.2                                                                        #
+#   Version: 3.3                                                                        #
 #                                                                                       #
 #   Description: This script is used to scrape the questions and other information      #
 #   from a tryhackme room. It will then add it to a structure and save to a file.       #
@@ -18,12 +18,14 @@
 #   The body text with the correct Github link etc.                                     #
 #                                                                                       #
 #   Changelog:                                                                          #
+#   3.3 - Modified the task element identifier as it would mistakenly include an        #
+#         unrelated element.                                                            #
 #   3.2 - Added some error handling and combined changed identifiers.                   #
 #   3.1 - Small modifications made to correctly identify relevant sections, tasks, and  #
 #         questions. Identifiers had changed.                                           #
 #   3.0 - Big update due to a significant backend change of the website. Each task      #
 #         is now only loaded when the task has been expanded. It will unload once the   #
-#         the task has been collapsed again. This requires interaction with the webpage #
+#         task has been collapsed again. This requires interaction with the webpage     #
 #         before the necessary source data can be captured. Each task needs to be       #
 #         expanded and the loaded task data exported seperately.                        #
 #       - Added progress bar for the loading and saving of each task.                   #
@@ -220,6 +222,7 @@ def expand_and_update(soup, driver):
     print("locating items")
     # Locate the single parent div with the stable data-* attributes, because the class property constantly changes. This function is commented out below.
     task_elements = driver.find_elements(By.XPATH, '//*[contains(@id, "header-")]')
+    # Changed from '//*[contains(@data-testid, "header-")]' as 'id' also contained 'header-' for another div that wasn't wanted.
     #(By.CSS_SELECTOR("[id^=header-]"))
     # Find all child div elements one layer down
     #task_elements = task_parent_element.find_all('div', recursive=False)  # recursive=False ensures only direct children are found
@@ -279,6 +282,11 @@ def expand_and_update(soup, driver):
         else:
             updated_task_elements = updated_task_parent_element.find_all('div', recursive=False)
         
+        # Check of the number of tasks found corresponds with the number of task found in the updated page. Can be used to identify issues identifying the correct elements.
+        if len(task_elements)!=len(updated_task_elements):
+            print("!!!!!! ERROR !!!!!! \n The number of tasks found does not correspond. Please review the filters used to identify the correct element. Line 222 or 270.")
+            error_exit()
+
         # Now, grab the current task, which should be expanded
         expanded_task = updated_task_elements[task_index]  # We use task_index to track the task
         
@@ -511,7 +519,7 @@ if __name__ == "__main__":
 
     # Find all child div elements one layer down
     if task_parent_element == None:
-            print("!!!!!! ERROR !!!!!! \n The task parent element variable is empty. Please review the filters used to identify the correct element. This might mean the page source variable is not updated with the expanded page source (expand_and_update). Line 488.")
+            print("!!!!!! ERROR !!!!!! \n The task parent element variable is empty. Please review the filters used to identify the correct element. This might mean the page source variable is not updated with the expanded page source (expand_and_update). Line 517.")
             error_exit()
     else:
         elements = task_parent_element.find_all('div', recursive=False)  # recursive=False ensures only direct children are found
