@@ -1,7 +1,7 @@
 #########################################################################################
 #                                                                                       #
 #   Author: Kevinovitz                                                                  #
-#   Version: 3.3                                                                        #
+#   Version: 3.4                                                                        #
 #                                                                                       #
 #   Description: This script is used to scrape the questions and other information      #
 #   from a tryhackme room. It will then add it to a structure and save to a file.       #
@@ -18,6 +18,9 @@
 #   The body text with the correct Github link etc.                                     #
 #                                                                                       #
 #   Changelog:                                                                          #
+#   3.4 - Added another keyword to filter out of the question text. Changed the task    #
+#         element identifier from 3.3 to the correct one. Fixed and issues where tasks  #
+#         with questions that didn't require an answer were completely filtered out.    #
 #   3.3 - Modified the task element identifier as it would mistakenly include an        #
 #         unrelated element.                                                            #
 #   3.2 - Added some error handling and combined changed identifiers.                   #
@@ -99,7 +102,7 @@ github_path = ''                 # Add path to you github writeup repo (C:path\\
 github_repo = ''                 # Add URL to you github writeup repo (https://github.com/username/repo). Make sure to remove any trailing '/'. Leave blank if you won't upload to github.
 write_to_cache = False           # Default is False, when True the resulting parsed webpage will be saved to a temp file.
 use_cached = False               # Default is False, when True the cached webpage will be loaded instead of parsing the live website. Usefull for testing purposes.
-suffixes = ['SubmitHint','Submit','Complete','Correct AnswerHint','Correct Answer','CompleteHint']         # Removes text added to the end of certain questions.
+suffixes = ['SubmitHint','Submit','Complete','Correct AnswerHint','Correct Answer','CompleteHint','Check']         # Removes text added to the end of certain questions.
 
 def error_exit():
     driver.close
@@ -221,7 +224,7 @@ def expand_and_update(soup, driver):
 
     print("locating items")
     # Locate the single parent div with the stable data-* attributes, because the class property constantly changes. This function is commented out below.
-    task_elements = driver.find_elements(By.XPATH, '//*[contains(@id, "header-")]')
+    task_elements = driver.find_elements(By.XPATH, '//*[contains(@data-testid, "header-")]')
     # Changed from '//*[contains(@data-testid, "header-")]' as 'id' also contained 'header-' for another div that wasn't wanted.
     #(By.CSS_SELECTOR("[id^=header-]"))
     # Find all child div elements one layer down
@@ -537,7 +540,8 @@ if __name__ == "__main__":
             # print('Processing task ' + str(index) + ' of ' + str(len(elements)) + '.')
             # For each entry check if there is a question which needs an answer. If not, it won't be included in the ToC
             # if 'placeholder=""' in str(element): # Some rooms use a different placeholder text. So I changed it to exclude the no answer placeholder instead.
-            if not 'placeholder="No answer needed"' in str(element):
+            # if not 'placeholder="No answer needed"' in str(element): # Some rooms also include 'no answers' in valid tasks. Used different tag to identify.
+            if 'data-sentry-source-file="masked-form-input.tsx"' in str(element):
             # if "Answer format" in str(element):- # Layout has changed and removed this string from questions that need an answer.
                 #print(element)
                 

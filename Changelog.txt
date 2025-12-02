@@ -1,5 +1,15 @@
 Changelog:
 
+3.4
+
+Fixed:
+
+- Changed task element identifier from 3.3 to the correct one. 
+- Fixed and issues where tasks with questions that didn't require an answer were completely filtered out.
+
+Added:
+- Added another keyword to filter out of the question text. Changed the task
+
 3.3
 
 Fixed:
